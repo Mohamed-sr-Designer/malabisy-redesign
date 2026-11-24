@@ -548,8 +548,8 @@ function heroHTML(v) {
       <div class="heroC__cap"><div><p class="kicker">The Marketplace</p><h2 class="h1">${MKT_BRANDS.length} brands, one bag</h2><p class="muted" style="margin:8px 0 0">Sold by the brands · delivered by Malabisy</p></div><span class="btn btn--outline">Explore brands</span></div></a>
   </section>`;
   return `<section class="heroA">
-    <a class="heroA__img" href="malabisy.html" aria-label="Shop Malabisy Winter ’27"><img src="${CAMPAIGN}" alt="Malabisy Winter ’27 — The layers we love" fetchpriority="high"></a>
-    <div class="heroA__dock"><div class="heroA__pill glass glass--dark"><div><p class="kicker">Malabisy Label · Winter ’27</p><b class="heroA__t">The layers we love</b></div>
+    <a class="heroA__img" href="malabisy.html" aria-label="Shop the Winter Edit"><picture><source media="(max-width: 960px)" srcset="assets/img/hero-editorial-mobile.jpg"><img src="assets/img/hero-editorial.jpg" alt="The Editorial Edit: five women in winter coats in front of the word WINTER, with the line Make it fashion" fetchpriority="high"></picture></a>
+    <div class="heroA__dock"><div class="heroA__pill glass glass--dark"><div><p class="kicker">The Editorial Edit · Winter 2026</p><b class="heroA__t">Winter will be winter. Make it fashion.</b></div>
       <div class="hero__ctas"><a class="btn btn--white" href="malabisy.html">Shop the collection</a><a class="btn btn--glass" href="marketplace.html">Explore the marketplace</a></div></div></div>
   </section>`;
 }
