@@ -322,9 +322,9 @@ function initSearch() {
   });
   q.value = params.get("q") || ""; run();
 }
-function open(sel) { $(sel).classList.add("open"); $("#scrim").classList.add("open"); document.body.classList.add("lock"); document.body.style.overflow = "hidden"; }
-function closeAll() { $$(".drawer,.mnav,.search,.modal,.scrim,.filters,.lightbox").forEach((e) => e.classList.remove("open")); document.body.classList.remove("lock"); document.body.style.overflow = ""; }
-function openSearch() { $("#search").classList.add("open"); document.body.style.overflow = "hidden"; setTimeout(() => $("#q").focus(), 60); }
+function open(sel) { $(sel).classList.add("open"); $("#scrim").classList.add("open"); document.body.classList.add("lock"); document.body.style.overflow = "hidden"; document.documentElement.classList.add("noscroll"); }
+function closeAll() { $$(".drawer,.mnav,.search,.modal,.scrim,.filters,.lightbox").forEach((e) => e.classList.remove("open")); document.body.classList.remove("lock"); document.body.style.overflow = ""; document.documentElement.classList.remove("noscroll"); }
+function openSearch() { $("#search").classList.add("open"); document.body.style.overflow = "hidden"; document.documentElement.classList.add("noscroll"); setTimeout(() => $("#q").focus(), 60); }
 
 /* bag drawer */
 function lineHTML(x, i, editable) {
@@ -468,7 +468,7 @@ function listing(source, { lockBrand = false, title = "" } = {}) {
     $("#filters").addEventListener("click", (e) => { const b = e.target.closest("[data-sz]"); if (!b) return; const s = b.dataset.sz; st.sizes.has(s) ? st.sizes.delete(s) : st.sizes.add(s); update(); });
     if (!lockBrand) $("#fBrandQ").oninput = renderFilters;
     $("#sort").onchange = (e) => { st.sort = e.target.value; renderGrid(); };
-    $("#openF").onclick = () => { $("#filters").classList.add("open"); document.body.style.overflow = "hidden"; };
+    $("#openF").onclick = () => { $("#filters").classList.add("open"); document.body.style.overflow = "hidden"; document.documentElement.classList.add("noscroll"); };
     $("#chips").addEventListener("click", (e) => {
       const c = e.target.closest("[data-chip]"); if (!c) return;
       const [k, v] = c.dataset.chip.split(/:(.*)/s);
@@ -812,7 +812,7 @@ function productPage() {
   // lightbox
   let li = 0; const lb = $("#lb"), lbi = $("#lbImg img");
   const show = () => { lbi.src = img(r.i[li], 1800); $("#lbC").textContent = `${li + 1} / ${r.i.length}`; $("#lbImg").classList.remove("zoom"); };
-  $$("[data-lb]").forEach((b) => (b.onclick = () => { li = +b.dataset.lb; show(); lb.classList.add("open"); document.body.style.overflow = "hidden"; }));
+  $$("[data-lb]").forEach((b) => (b.onclick = () => { li = +b.dataset.lb; show(); lb.classList.add("open"); document.body.style.overflow = "hidden"; document.documentElement.classList.add("noscroll"); }));
   $("#lbP").onclick = () => { li = (li - 1 + r.i.length) % r.i.length; show(); };
   $("#lbN").onclick = () => { li = (li + 1) % r.i.length; show(); };
   $("#lbZoom").onclick = () => $("#lbImg").classList.toggle("zoom");
@@ -1013,6 +1013,40 @@ function account() {
   render();
 }
 
+
+/* brand marquee: moves on its own, can be swiped by hand, then carries on */
+function initMarquee() {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  $$(".mq__row").forEach((row) => {
+    const track = row.querySelector(".mq__track"); if (!track) return;
+    row.classList.add("mq__row--js");
+    const dir = row.classList.contains("mq__row--rev") ? -1 : 1;
+    let half = 0, pos = 0, holdUntil = 0, hover = false, last = 0;
+    const measure = () => { half = track.scrollWidth / 2; };
+    const wrap = () => { if (!half) return; if (pos >= half) pos -= half; else if (pos < 0) pos += half; };
+    measure(); pos = dir < 0 ? half * 0.5 : 0; row.scrollLeft = pos;
+    addEventListener("resize", measure);
+    track.querySelectorAll("img").forEach((im) => im.complete || im.addEventListener("load", measure, { once: true }));
+    const release = () => { holdUntil = performance.now() + 1600; };
+    row.addEventListener("touchstart", () => { holdUntil = Infinity; }, { passive: true });
+    row.addEventListener("touchend", release, { passive: true });
+    row.addEventListener("touchcancel", release, { passive: true });
+    row.addEventListener("wheel", release, { passive: true });
+    if (matchMedia("(hover: hover)").matches) { row.addEventListener("mouseenter", () => (hover = true)); row.addEventListener("mouseleave", () => (hover = false)); }
+    row.addEventListener("scroll", () => {
+      if (performance.now() >= holdUntil) return;
+      pos = row.scrollLeft; const p0 = pos; wrap(); if (pos !== p0) row.scrollLeft = pos;
+    }, { passive: true });
+    if (reduce) return;
+    const tick = (t) => {
+      const dt = last ? Math.min(t - last, 64) / 1000 : 0; last = t;
+      if (!hover && t >= holdUntil && half) { pos += dir * (half / 70) * dt; wrap(); row.scrollLeft = pos; }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
 /* =========================================================
    BOOT
    ========================================================= */
@@ -1022,6 +1056,7 @@ const page = document.body.dataset.page;
 chrome({ label: "label", market: params.get("new") === "1" ? "new" : params.get("g") || "", brand: "brands", brands: "brands", product: byH.get(params.get("h")) && isOwn(byH.get(params.get("h"))) ? "label" : "" }[page] || "");
 ({ home, label, market, account, brands: brandsPage, brand: brandPage, product: productPage, bag: checkout, sell, custom: () => { app.innerHTML = ""; } }[page] || home)();
 initCarousels();
+initMarquee();
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.08 });
 $$(".rv").forEach((el) => io.observe(el));
 })();

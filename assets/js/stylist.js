@@ -792,12 +792,22 @@
 
   /* ---------------- events ---------------- */
   let opened = false;
+  const phone = matchMedia("(max-width: 600px)");
+  const vv = window.visualViewport;
+  const fitSheet = () => {
+    if (!phone.matches || !root.classList.contains("mst-open") || !vv) { panel.style.removeProperty("--mst-h"); panel.style.removeProperty("--mst-b"); return; }
+    panel.style.setProperty("--mst-h", vv.height + "px");
+    panel.style.setProperty("--mst-b", Math.max(0, innerHeight - vv.height - vv.offsetTop) + "px");
+    log.scrollTop = log.scrollHeight;
+  };
+  if (vv) { vv.addEventListener("resize", fitSheet); vv.addEventListener("scroll", fitSheet); }
+  const lockPage = (on) => document.documentElement.classList.toggle("mst-lock", on && phone.matches);
   function openPanel() {
-    root.classList.add("mst-open"); panel.hidden = false; $(".mst-nudge").classList.remove("mst-on");
+    root.classList.add("mst-open"); panel.hidden = false; lockPage(true); fitSheet(); $(".mst-nudge").classList.remove("mst-on");
     if (!opened) { opened = true; if (state.history.length) state.history.forEach(([k, h]) => add(k, h, false)); else greet(); }
-    setTimeout(() => input.focus(), reduce ? 0 : 250);
+    if (!phone.matches) setTimeout(() => input.focus(), reduce ? 0 : 250);
   }
-  function closePanel() { root.classList.remove("mst-open"); setTimeout(() => { if (!root.classList.contains("mst-open")) panel.hidden = true; }, 400); $(".mst-launch").focus(); }
+  function closePanel() { root.classList.remove("mst-open"); lockPage(false); input.blur(); fitSheet(); setTimeout(() => { if (!root.classList.contains("mst-open")) panel.hidden = true; }, 400); if (!phone.matches) $(".mst-launch").focus(); }
   function send(textIn) {
     const t = textIn.trim(); if (!t) return;
     add("me", esc(t));
@@ -828,7 +838,7 @@
     if (act === "cmp" && card) { const h = card.dataset.h; state.compare = state.compare.includes(h) ? state.compare.filter((x) => x !== h) : [...state.compare, h].slice(-3); renderTray(); return; }
     if (act === "docmp") return doCompare(state.compare.map(API.byHandle));
   });
-  $(".mst-form").addEventListener("submit", (e) => { e.preventDefault(); const v = input.value; input.value = ""; send(v); });
+  $(".mst-form").addEventListener("submit", (e) => { e.preventDefault(); const v = input.value; input.value = ""; if (phone.matches) input.blur(); send(v); });
   root.addEventListener("keydown", (e) => { if (e.key === "Escape" && root.classList.contains("mst-open")) { e.stopPropagation(); closePanel(); } });
 
   /* ---------------- stay out of the way of the shop ---------------- */
@@ -848,6 +858,7 @@
   const dodge = () => {
     dodgeRaf = 0;
     if (root.classList.contains("mst-open")) return root.classList.remove("mst-dodge");
+    if (phone.matches || matchMedia("(hover: none)").matches) return root.classList.remove("mst-dodge");
     // exact rectangle test against every visible shop control near the launcher's corner
     const r = launcher.getBoundingClientRect(), pad = 6;
     const L = r.left - pad, R = r.right + pad, T = r.top - pad, B = r.bottom + pad;
