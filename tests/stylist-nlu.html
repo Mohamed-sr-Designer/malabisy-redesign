@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stylist language tests (test fixture, not linked)</title>
+<base href="/">
+<link rel="stylesheet" href="assets/css/malabisy.css">
+<link rel="stylesheet" href="assets/css/stylist.css">
+</head>
+<body data-page="home">
+<main id="app"></main>
+<pre id="out">running</pre>
+<script src="assets/js/catalog.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/stylist.js" defer></script>
+<script src="tests/stylist-nlu-cases.js" defer></script>
+<script>
+addEventListener("load", () => {
+  localStorage.removeItem("mst_profile");
+  const S = window.MLB_STYLIST, rows = [];
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  for (const [lang, input, e, minResults = 0, ctxLast] of window.NLU_CASES) {
+    const q = S.parse(input, { last: ctxLast || null });
+    const fails = [];
+    for (const [k, v] of Object.entries(e)) {
+      const got = q[k];
+      if (k === "cats" || k === "colors" || k === "notColors" || k === "sizes") { if (!v.every((x) => (got || []).includes(x))) fails.push(`${k}: want ${v} got ${got}`); }
+      else if (k === "label" || k === "men" || k === "kids" || k === "sale" || k === "newIn" || k === "modest" || k === "gift") { if (!!got !== v) fails.push(`${k}: want ${v} got ${!!got}`); }
+      else if (!same(got, v)) fails.push(`${k}: want ${JSON.stringify(v)} got ${JSON.stringify(got)}`);
+    }
+    let results = null;
+    if (minResults) {
+      const qq = ctxLast ? { ...ctxLast, ...q } : q;
+      results = q.intent === "outfit" ? S.outfit(null, qq).pieces.length : S.find(q.intent === "gift" ? { ...qq, cats: qq.cats.length ? qq.cats : ["bag", "acc", "knit"] } : qq, { limit: 6 }).length;
+      if (results < minResults) fails.push(`results: ${results}`);
+    }
+    rows.push({ lang, input, norm: q.norm, intent: q.intent, cats: q.cats, colors: q.colors, notColors: q.notColors, occasion: q.occasion, min: q.min, max: q.max, sizes: q.sizes, brand: q.brand, flags: ["sale", "newIn", "modest", "men", "kids", "label", "gift"].filter((f) => q[f]), unknown: q.unknown, fixed: q.fixed, results, pass: !fails.length, fails });
+  }
+  document.getElementById("out").textContent = "NLU_JSON" + JSON.stringify(rows) + "NLU_END";
+});
+</script>
+</body>
+</html>
